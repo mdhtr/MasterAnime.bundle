@@ -57,7 +57,7 @@ def MetadataObjectForURL(url):
         year = year,
         summary = summary,
         content_rating_age = content_rating_age,
-        thumb = Resource.ContentsOfURLWithFallback(url = thumb, fallback='default_cover.png') #TODO default_cover.png
+        thumb = Resource.ContentsOfURLWithFallback(url = thumb, fallback="icon-default.png")
     )
 
 ######################################################################################
@@ -72,4 +72,5 @@ def MetadataObjectForURL(url):
 @deferred
 def MediaObjectsForURL(url):
     # URL example: http://www.masterani.me/anime/info/1560-heavy-object
-    return MediaObject()
+    return [MediaObject()]
+
