@@ -1,3 +1,6 @@
+import Shortcuts, Objects, Constants, Log, XML
+from MediaXML import MediaObject
+from XML import ElementFromURL, StringFromElement
 ######################################################################################
 
 ######################################################################################
@@ -11,7 +14,51 @@
 # Returns A metadata object representing the media available at the given
 #   URL.
 def MetadataObjectForURL(url):
-    return MovieObject()
+    # URL example: http://www.masterani.me/anime/info/1560-heavy-object
+    show_data = ElementFromURL(url)
+    # XPATHs:
+    # genres: string[] '//*/a[@class="ui label"]/text()' (list)
+    genres = show_data.xpath('//*/a[@class="ui label"]/text()')
+    # rating: array, '//*/div[@class="rating"]/@data-score' (float between 0 and 1)
+    try:
+        rating = float(show_data.xpath('//*/div[@class="rating"]/@data-score')[0])
+    except:
+        rating = 0.0
+    # title of the show: string[] '//*/div[@class="title"]/h1/span/text()' (string)
+    title = show_data.xpath('//*/div[@class="title"]/h1/span/text()')[0]
+    # summary of the show: string[] '//*/div[@class="synopsis"]/p/text()' (string)
+    summary = show_data.xpath('//*/div[@class="synopsis"]/p/text()')[0]
+    # thumb: array, '//*/div[@class="ui cover image"]/img/@src' (src string)
+    thumb = show_data.xpath('//*/div[@class="ui cover image"]/img/@src')[0]
+    # score, type, episodes, status, aired, age group (in this order):
+    # string[] of the keys: '//*/div[@class="info"]/p/span/text()'
+    # string[] of the values: '//*/div[@class="info"]/p/text()'
+    # content rating age --> age group (string)
+    content_rating_age = show_data.xpath('//*/div[@class="info"]/p/text()')[5]
+    # year --> aired (integer of release year
+    try:
+        year_text = show_data.xpath('//*/div[@class="info"]/p/text()')[4]
+        year_regex = Regex("\d{4}")
+        year = int(year_regex.search(year_text).group()[:4])
+    except:
+        year = 0
+    # tags --> the type and status, ie. TV. ongoing (list)
+    type = show_data.xpath('//*/div[@class="info"]/p/text()')[1]
+    episodes = show_data.xpath('//*/div[@class="info"]/p/text()')[2]
+    status = show_data.xpath('//*/div[@class="info"]/p/text()')[3]
+    tags = [type + " (" + episodes + ")", status]
+
+    return MovieObject(
+        genres = genres,
+        tags = tags,
+        rating = rating,
+        source_title = 'MasterAni.me',
+        title = title,
+        year = year,
+        summary = summary,
+        content_rating_age = content_rating_age,
+        thumb = Resource.ContentsOfURLWithFallback(url = thumb, fallback='default_cover.png') #TODO default_cover.png
+    )
 
 ######################################################################################
 # This function should create and return a list of media objects and part objects representing
@@ -24,4 +71,5 @@ def MetadataObjectForURL(url):
 # Return type list
 @deferred
 def MediaObjectsForURL(url):
+    # URL example: http://www.masterani.me/anime/info/1560-heavy-object
     return MediaObject()
