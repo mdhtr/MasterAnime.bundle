@@ -1,0 +1,27 @@
+######################################################################################
+
+######################################################################################
+# This function should create and return a metadata object (for example, a VideoClipOb-
+#   ject) and populate it with metadata from the given URL. Only the metadata should be
+#   added here - the object's key and rating_key properties will be synthesised based on
+#   the URL.
+# Parameters url (str (http://docs.python.org/library/functions.html#str)) -
+#   The URL of the web page to use as a source for generating the metadata
+#   object.
+# Returns A metadata object representing the media available at the given
+#   URL.
+def MetadataObjectForURL(url):
+    return MovieObject()
+
+######################################################################################
+# This function should create and return a list of media objects and part objects representing
+#   the media available at the given URL. Callbacks may be used if obtaining the final media
+#   location requires additional computation.
+# Parameters url (str (http://docs.python.org/library/functions.html#str)) -
+#   The URL of the web page to use as a source for generating the metadata
+#   object.
+# Returns Media objects representing the media available at the given URL.
+# Return type list
+@deferred
+def MediaObjectsForURL(url):
+    return MediaObject()
