@@ -1,6 +1,6 @@
-import Shortcuts, Objects, Constants, Log, XML
-from MediaXML import MediaObject
-from XML import ElementFromURL, StringFromElement
+# import Shortcuts, Objects, Constants, Log, XML
+# from MediaXML import MediaObject
+# from XML import ElementFromURL, StringFromElement
 ######################################################################################
 
 ######################################################################################
@@ -14,38 +14,41 @@ from XML import ElementFromURL, StringFromElement
 # Returns A metadata object representing the media available at the given
 #   URL.
 def MetadataObjectForURL(url):
-    # URL example: http://www.masterani.me/anime/info/1560-heavy-object
-    show_data = ElementFromURL(url)
+    # Show URL example:    http://www.masterani.me/anime/info/1560-heavy-object
+    # Episode URL Example: http://www.masterani.me/anime/watch/1114-diamond-no-ace-second-season/1
+    episode_url = url.split("??")[0]
+    serie_url = episode_url.replace("/watch/", "/info/")[0:episode_url.replace("/watch/", "/info/").rfind('/')]
+    serie_data = HTML.ElementFromURL(serie_url)
     # XPATHs:
     # genres: string[] '//*/a[@class="ui label"]/text()' (list)
-    genres = show_data.xpath('//*/a[@class="ui label"]/text()')
+    genres = serie_data.xpath('//*/a[@class="ui label"]/text()')
     # rating: array, '//*/div[@class="rating"]/@data-score' (float between 0 and 1)
     try:
-        rating = float(show_data.xpath('//*/div[@class="rating"]/@data-score')[0])
+        rating = float(serie_data.xpath('//*/div[@class="rating"]/@data-score')[0])
     except:
         rating = 0.0
     # title of the show: string[] '//*/div[@class="title"]/h1/span/text()' (string)
-    title = show_data.xpath('//*/div[@class="title"]/h1/span/text()')[0]
+    title = serie_data.xpath('//*/div[@class="title"]/h1/span/text()')[0]
     # summary of the show: string[] '//*/div[@class="synopsis"]/p/text()' (string)
-    summary = show_data.xpath('//*/div[@class="synopsis"]/p/text()')[0]
+    summary = serie_data.xpath('//*/div[@class="synopsis"]/p/text()')[0]
     # thumb: array, '//*/div[@class="ui cover image"]/img/@src' (src string)
-    thumb = show_data.xpath('//*/div[@class="ui cover image"]/img/@src')[0]
+    thumb = serie_data.xpath('//*/div[@class="ui cover image"]/img/@src')[0]
     # score, type, episodes, status, aired, age group (in this order):
     # string[] of the keys: '//*/div[@class="info"]/p/span/text()'
     # string[] of the values: '//*/div[@class="info"]/p/text()'
     # content rating age --> age group (string)
-    content_rating_age = show_data.xpath('//*/div[@class="info"]/p/text()')[5]
+    content_rating_age = serie_data.xpath('//*/div[@class="info"]/p/text()')[5]
     # year --> aired (integer of release year
     try:
-        year_text = show_data.xpath('//*/div[@class="info"]/p/text()')[4]
+        year_text = serie_data.xpath('//*/div[@class="info"]/p/text()')[4]
         year_regex = Regex("\d{4}")
         year = int(year_regex.search(year_text).group()[:4])
     except:
         year = 0
     # tags --> the type and status, ie. TV. ongoing (list)
-    type = show_data.xpath('//*/div[@class="info"]/p/text()')[1]
-    episodes = show_data.xpath('//*/div[@class="info"]/p/text()')[2]
-    status = show_data.xpath('//*/div[@class="info"]/p/text()')[3]
+    type = serie_data.xpath('//*/div[@class="info"]/p/text()')[1]
+    episodes = serie_data.xpath('//*/div[@class="info"]/p/text()')[2]
+    status = serie_data.xpath('//*/div[@class="info"]/p/text()')[3]
     tags = [type + " (" + episodes + ")", status]
 
     return MovieObject(
@@ -56,8 +59,8 @@ def MetadataObjectForURL(url):
         title = title,
         year = year,
         summary = summary,
-        content_rating_age = content_rating_age,
-        thumb = Resource.ContentsOfURLWithFallback(url = thumb, fallback="icon-default.png")
+        #content_rating_age = content_rating_age,
+        #thumb = Resource.ContentsOfURLWithFallback(url = thumb, fallback="default_video_thumbnail.png")
     )
 
 ######################################################################################
@@ -69,8 +72,24 @@ def MetadataObjectForURL(url):
 #   object.
 # Returns Media objects representing the media available at the given URL.
 # Return type list
+
+MP4UPLOAD = [
+	Regex('url: \'(http\:\/\/.*?\/video\.mp4.*?)\''),
+	Regex('\'image\': \'(http\://.*?\.jpg)\'')
+]
+ARKVID = [
+	Regex('source src="(http:\/\/.*?)"'),
+	Regex('poster="(http:\/\/.*?)"')
+]
+
 @deferred
 def MediaObjectsForURL(url):
     # URL example: http://www.masterani.me/anime/info/1560-heavy-object
-    return [MediaObject()]
+    host_url = url.split("??")[1]
+    mirror_data = HTML.ElementFromURL(host_url)
+    string_data = HTML.StringFromElement(mirror_data)
+
+    find_url = MP4UPLOAD[0].search(string_data).group(1)
+    url = String.Unquote(find_url, usePlus=False)
+    return [MediaObject(parts = [PartObject(key = url)])]
 
