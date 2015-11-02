@@ -25,39 +25,43 @@ def Start():
 ######################################################################################
 @handler(PREFIX, TITLE, art=ART, thumb=ICON)
 def MainMenu(): # this is the landing page of the plugin because of the prefix handler.
-    # Recent Anime class="latest-anime", multipage
-    # 1 element:
-    # title array: '//*/div[@class="ui latest card"]//a[@class="title"]/text()'
-    # link href array: '//*/div[@class="ui latest card"]//a[@class="title"]/@href'
-    # thumb src array: '//*/div[@class="ui latest card"]/div[@class="image"]/img/@src'
-    # could be a Next page item for triggering the next page in a new directory.
-
-    # Anime of the week:
-    # title (array): '//*/h1[span[text()="ANIME OF THE WEEK"]]//a/text()'
-    # href (array): '//*/h1[span[text()="ANIME OF THE WEEK"]]//a/@href'
-    # thumb (array): should be this but it might not work at all:
-    # '//*/h1[span[text()="ANIME OF THE WEEK"]]//a/img/@src'
-
-    # Spotlight: Being Watched / Popular Today
-    # TODO finish main menu items
-
-    # main_menu_categories = ["RECENT ANIME", "ANIME OF THE WEEK", "SPOTLIGHT"]
-    # page_element = HTML.ElementFromURL(BASE_URL)
-    # main_page_headings = page_element.xpath('//*/h1/*[1]/text()')
-
     oc = ObjectContainer()
 
     oc.add(
         DirectoryObject(
-            key = Callback(CategorySubMenu, category_title='Recent Anime'),
+            key = Callback(RecentAnimeSubMenu, category_title='Recent Anime'),
             title = 'Recent Anime'
+        )
+    )
+    oc.add(
+        DirectoryObject(
+            key = Callback(AnimeOfTheWeekSubMenu, category_title='Anime of the Week'),
+            title = 'Anime of the Week'
+        )
+    )
+    oc.add(
+        DirectoryObject(
+            key = Callback(CategorySubMenu, category_title='Spotlight: Being Watched', category_url=BASE_URL + '/anime/being-watched'),
+            title = 'Spotlight: Being Watched'
+        )
+    )
+    oc.add(
+        DirectoryObject(
+            key = Callback(CategorySubMenu, category_title='Spotlight: Popular Today', category_url=BASE_URL + '/anime/popular-today'),
+            title = 'Spotlight: Popular Today'
         )
     )
     return oc
 
 ######################################################################################
-@route(PREFIX + "/category")
-def CategorySubMenu(category_title):
+# Recent Anime class="latest-anime", multipage
+# 1 element:
+# title array: '//*/div[@class="ui latest card"]//a[@class="title"]/text()'
+# link href array: '//*/div[@class="ui latest card"]//a[@class="title"]/@href'
+# thumb src array: '//*/div[@class="ui latest card"]/div[@class="image"]/img/@src'
+# could be a Next page item for triggering the next page in a new directory.
+@route(PREFIX + "/categoryrecent")
+def RecentAnimeSubMenu(category_title):
     oc = ObjectContainer(title1=category_title)
 
     page_element = HTML.ElementFromURL(BASE_URL)
@@ -66,13 +70,59 @@ def CategorySubMenu(category_title):
         serie_title = page_element.xpath('//*/div[@class="ui latest card"]//a[@class="title"]/text()')[card]
         serie_url = ValidateUrl(page_element.xpath('//*/div[@class="ui latest card"]//a[@class="title"]/@href')[card])
         serie_img = ValidateUrl(page_element.xpath('//*/div[@class="ui latest card"]/div[@class="image"]/img/@src')[card])
-        thumb_src = serie_img.split('?')[0]
-        Log.Debug('Thumbnail Image: ' + thumb_src)
 
         oc.add(DirectoryObject(
             key = Callback(SerieSubMenu, serie_title = serie_title, serie_url = serie_url),
             title = serie_title,
-            thumb = Resource.ContentsOfURLWithFallback(url = thumb_src, fallback='icon-default.png'),
+            thumb = Resource.ContentsOfURLWithFallback(url = serie_img, fallback='icon-default.png'),
+            summary = 'Watch ' + serie_title + ' from MasterAni.me!'
+        ))
+    return oc
+######################################################################################
+# Anime of the week:
+# title (array): '//*/h1[span[text()="ANIME OF THE WEEK"]]//a/text()'
+# href (array): '//*/h1[span[text()="ANIME OF THE WEEK"]]//a/@href'
+# thumb (array): should be this but it might not work at all:
+# '//*/h1[span[text()="ANIME OF THE WEEK"]]//a/img/@src'
+@route(PREFIX + "/categoryweek")
+def AnimeOfTheWeekSubMenu(category_title):
+    oc = ObjectContainer(title1=category_title)
+
+    page_element = HTML.ElementFromURL(BASE_URL)
+    serie_title = page_element.xpath('//*/h1[span[text()="ANIME OF THE WEEK"]]//a/text()')[0]
+    serie_url = ValidateUrl(page_element.xpath('//*/h1[span[text()="ANIME OF THE WEEK"]]//a/@href')[0])
+    serie_img = ValidateUrl(page_element.xpath('//*/h1[span[text()="ANIME OF THE WEEK"]]//a/img/@src')[0])
+    Log.Debug(serie_title + " " + serie_url + " " + serie_img)
+
+    oc.add(DirectoryObject(
+        key=Callback(SerieSubMenu, serie_title=serie_title, serie_url=serie_url),
+        title=serie_title,
+        thumb=Resource.ContentsOfURLWithFallback(url=serie_img, fallback='icon-default.png'),
+        summary='Watch ' + serie_title + ' from MasterAni.me!'
+    ))
+    return oc
+######################################################################################
+# Spotlight: Popular Today
+# http://www.masterani.me/anime/popular-today
+# Spotlight: Being Watched
+# http://www.masterani.me/anime/being-watched
+@route(PREFIX + "/category")
+def CategorySubMenu(category_title, category_url):
+    oc = ObjectContainer(title1=category_title)
+
+    page_element = HTML.ElementFromURL(category_url)
+    serie_count = len(page_element.xpath('//*/div[@class="ui linked fluid card"]'))
+
+    for card in range(0, serie_count):
+        serie_title = page_element.xpath('//*/div[@class="ui linked fluid card"]/a[@class="ui bottom black attached button"]/text()')[card]
+        serie_url = ValidateUrl(page_element.xpath('//*/div[@class="ui linked fluid card"]/a[@class="image"]/@href')[card])
+        serie_img = ValidateUrl(page_element.xpath('//*/div[@class="ui linked fluid card"]/a[@class="image"]/img/@src')[card])
+        Log.Debug(serie_title + " " + serie_url + " " + serie_img)
+
+        oc.add(DirectoryObject(
+            key = Callback(SerieSubMenu, serie_title = serie_title, serie_url = serie_url),
+            title = serie_title,
+            thumb = Resource.ContentsOfURLWithFallback(url = serie_img, fallback='icon-default.png'),
             summary = 'Watch ' + serie_title + ' from MasterAni.me!'
         ))
     return oc
@@ -147,6 +197,9 @@ def ValidateUrl(url):
         return correct_url
     elif url.startswith('/'):
         correct_url = BASE_URL + url
+        return correct_url
+    elif url.startswith('https://'):
+        correct_url = url.replace('https://', 'http://')
         return correct_url
     else:
         return url
